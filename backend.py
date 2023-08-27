@@ -3,26 +3,31 @@ from flask import request
 from flask import render_template, send_from_directory
 import base64
 import openai
+import conexion
 app = Flask(__name__)
-
-OPENAI_KEY = "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"
+OPENAI_KEY = "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"
 OPENAI_API_URL = "https://api.openai.com/v1"
 openai.api_key = OPENAI_KEY
 openai.api_base = OPENAI_API_URL
 
+estado_tramite = conexion.estado_tramite("001")
+if estado_tramite == "en_demora":
+    datos = conexion.en_demora("001")
+elif estado_tramite == "listo":
+    datos = conexion.listo("001")
+else:
+    datos = conexion.observado("001") 
+
+
 system_message = f"""
-Eres un asistente virtual de la Universidad Autonoma Gabriel Rene Moreno. \
-Los estudiantes te harán preguntas sobre la universidad y debes responder en base a la \
+Eres un asistente virtual de una agencia de tramites. \
+se te dio informacion sobre un tramite el cual su estado es {estado_tramite}\
 informacion que ahora te proporcionamos \
 Si no conoces una respuesta muestra el texto: 'No tengo esta información, le recomendamos contactarse con un asistente.' \
 
-Año de fundacion: 1880 \
-es una universidad publica de Bolivia \
-tiene 18 facultades \
-tiene 60 carreras \
-se debe rendir un examen para ingresar \
-tambien es posible a través de un curso preuniversitario
-"""
+el estado del tramite es en_demora mandale el siguiente mensaje: tu tramite esta en demora, la fecha limite para tenerlo listo es {datos[0]}  \
+el estado del tramite es listo mandale el siguiente mensaje: tu tramite esta listo la fecha de aceptacion fue el {datos[0]} y debe recogerlo el {datos[1]}\
+el estado del tramite es observado y la descripcion es {datos[0]}, si la descripcion es error fecha dile que tiene un error en la fecha y debe ir a segip a corregir"""
 
 @app.route('/', methods=['GET'])
 def index():
@@ -48,7 +53,7 @@ def post_audio_file():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    prompt = request.json['data']
+    prompt = f"el estado de mi tramite es {estado_tramite} que debo hacer?"
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages = [
